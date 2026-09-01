@@ -56,15 +56,16 @@ jobs:
         id: msys2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: MINGW64
+          suppress-deprecation-warnings: msystem-mingw64
           update: true
-          install: mingw-w64-ucrt-x86_64-gcc
+          install: mingw-w64-x86_64-gcc
 
       - name: Add Windows GCC to PATH
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $gccDirectory = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'ucrt64\bin'
+          $gccDirectory = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'mingw64\bin'
           if (-not (Test-Path (Join-Path $gccDirectory 'gcc.exe'))) {
             throw "Could not locate GCC at $gccDirectory"
           }
