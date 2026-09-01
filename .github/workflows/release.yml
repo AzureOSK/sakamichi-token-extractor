@@ -53,6 +53,7 @@ jobs:
 
       - name: Install Windows GCC
         if: runner.os == 'Windows'
+        id: msys2
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -63,15 +64,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $gccDirectories = @(
-            "C:\msys64\ucrt64\bin",
-            "C:\msys64\mingw64\bin"
-          )
-          $gccDirectory = $gccDirectories |
-            Where-Object { Test-Path (Join-Path $_ "gcc.exe") } |
-            Select-Object -First 1
-          if (-not $gccDirectory) {
-            throw "Could not locate GCC on the Windows runner"
+          $gccDirectory = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'ucrt64\bin'
+          if (-not (Test-Path (Join-Path $gccDirectory 'gcc.exe'))) {
+            throw "Could not locate GCC at $gccDirectory"
           }
           $gccDirectory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 

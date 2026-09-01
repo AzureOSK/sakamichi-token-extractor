@@ -139,8 +139,8 @@ The release workflow runs when a tag beginning with `v` is pushed. It tests and 
 For example:
 
 ```shell
-git tag -a v0.1.2 -m "Sakamichi Token Extractor v0.1.2"
-git push origin v0.1.2
+git tag -a v0.1.3 -m "Sakamichi Token Extractor v0.1.3"
+git push origin v0.1.3
 ```
 
 The version reported by `sakamichi-token-extractor --version` is taken from the tag name during release builds. Local builds report `dev` unless a version is supplied explicitly, such as `make build VERSION=0.1.0`.
