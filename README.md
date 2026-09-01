@@ -27,7 +27,7 @@ A refresh token is a bearer credential. Anyone who obtains one may be able to ac
 
 ## Download or build
 
-Prebuilt binaries can be attached to the [GitHub Releases](https://github.com/AzureOSK/sakamichi-token-extractor/releases) page.
+Prebuilt macOS, Linux, and Windows binaries are published on the [GitHub Releases](https://github.com/AzureOSK/sakamichi-token-extractor/releases) page. Each release also includes a `SHA256SUMS` file for verifying downloads.
 
 To build from source:
 
@@ -131,6 +131,19 @@ go vet ./...
 ```
 
 The test suite covers backup discovery, app/access-group classification, refresh-token parsing, and output permissions.
+
+### Publishing a release
+
+The release workflow runs when a tag beginning with `v` is pushed. It tests and builds natively on macOS, Linux, and Windows runners, packages the executable with its documentation and license notices, generates SHA-256 checksums, and publishes the matching GitHub Release.
+
+For example:
+
+```shell
+git tag -a v0.1.1 -m "Sakamichi Token Extractor v0.1.1"
+git push origin v0.1.1
+```
+
+The version reported by `sakamichi-token-extractor --version` is taken from the tag name during release builds. Local builds report `dev` unless a version is supplied explicitly, such as `make build VERSION=0.1.0`.
 
 ## Attribution and license
 

@@ -23,8 +23,9 @@ import (
 	"golang.org/x/term"
 )
 
+var toolVersion = "dev"
+
 const (
-	toolVersion     = "0.1.0"
 	targetService   = "flutter_secure_storage_service"
 	targetKeyPrefix = "FC_TOKEN_KEY_"
 )

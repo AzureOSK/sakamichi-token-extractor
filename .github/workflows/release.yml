@@ -1,0 +1,166 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            goos: darwin
+            goarch: arm64
+            extension: tar.gz
+          - runner: macos-15-intel
+            goos: darwin
+            goarch: amd64
+            extension: tar.gz
+          - runner: ubuntu-24.04
+            goos: linux
+            goarch: amd64
+            extension: tar.gz
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            extension: tar.gz
+          - runner: windows-2025
+            goos: windows
+            goarch: amd64
+            extension: zip
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Add Windows GCC to PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gccDirectories = @(
+            "C:\msys64\ucrt64\bin",
+            "C:\msys64\mingw64\bin"
+          )
+          $gccDirectory = $gccDirectories |
+            Where-Object { Test-Path (Join-Path $_ "gcc.exe") } |
+            Select-Object -First 1
+          if (-not $gccDirectory) {
+            throw "Could not locate GCC on the Windows runner"
+          }
+          $gccDirectory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Test
+        run: go test ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build and package
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          package="sakamichi-token-extractor_${version}_${GOOS}_${GOARCH}"
+          mkdir -p "dist/${package}"
+          go build \
+            -trimpath \
+            -ldflags="-s -w -X main.toolVersion=${version}" \
+            -o "dist/${package}/sakamichi-token-extractor" \
+            ./cmd/sakamichi-token-extractor
+          cp README.md LICENSE NOTICE.md "dist/${package}/"
+          tar -czf "dist/${package}.tar.gz" -C dist "${package}"
+
+      - name: Build and package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          $package = "sakamichi-token-extractor_${version}_${env:GOOS}_${env:GOARCH}"
+          New-Item -ItemType Directory -Path "dist\$package" -Force | Out-Null
+          go build `
+            -trimpath `
+            -ldflags="-s -w -X main.toolVersion=$version" `
+            -o "dist\$package\sakamichi-token-extractor.exe" `
+            ./cmd/sakamichi-token-extractor
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          Copy-Item README.md, LICENSE, NOTICE.md -Destination "dist\$package"
+          Compress-Archive -Path "dist\$package\*" -DestinationPath "dist\$package.zip"
+
+      - name: Upload packaged binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*.${{ matrix.extension }}
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out source and tags
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download packaged binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --generate-notes \
+              --title "$GITHUB_REF_NAME"
+          fi
