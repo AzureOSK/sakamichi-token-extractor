@@ -10,24 +10,7 @@ Supported apps:
 
 The tool runs locally. At runtime it does not contact the apps' servers, upload backup data, modify the backup, or dump the complete iPhone Keychain.
 
-## Responsible use
-
-Only use this tool with a device, backup, and accounts that you own or are explicitly authorized to access.
-
-A refresh token is a bearer credential. Anyone who obtains one may be able to access the associated account until the token expires or is revoked. Never paste tokens into issue reports, commit them to Git, upload them to cloud storage, or share the encrypted-backup password.
-
-## Requirements
-
-- An **encrypted** local backup created by Finder, iTunes, or another compatible backup application. Unencrypted backups do not contain usable Keychain material.
-- The encrypted-backup password.
-- For source builds: Go 1.19 or newer and a C toolchain, because the backup reader uses `go-sqlite3`/CGO.
-  - macOS: Xcode Command Line Tools.
-  - Linux: the distribution's compiler/build-essential package.
-  - Windows: a supported GCC/MinGW environment.
-
-## Download or build
-
-Prebuilt macOS, Linux, and Windows binaries are published on the [GitHub Releases](https://github.com/AzureOSK/sakamichi-token-extractor/releases) page. Each release also includes a `SHA256SUMS` file for verifying downloads.
+## Quick Start Guide
 
 ### Use a prebuilt release
 
@@ -66,6 +49,25 @@ Get-FileHash .\sakamichi-token-extractor_*_windows_amd64.zip -Algorithm SHA256
 Then extract the ZIP and run `sakamichi-token-extractor.exe` from the extracted directory. Linux uses the same `tar -xzf` and `./sakamichi-token-extractor` commands as macOS with the appropriate Linux archive.
 
 The command finds the normal Finder/iTunes MobileSync backup location automatically. It prompts for the encrypted-backup password and writes the recovered token files to the same directory as the executable. See [Usage](#usage) to select a backup or output directory explicitly.
+
+## Responsible use
+
+Only use this tool with a device, backup, and accounts that you own or are explicitly authorized to access.
+
+A refresh token is a bearer credential. Anyone who obtains one may be able to access the associated account until the token expires or is revoked. Never paste tokens into issue reports, commit them to Git, upload them to cloud storage, or share the encrypted-backup password.
+
+## Requirements
+
+- An **encrypted** local backup created by Finder, iTunes, or another compatible backup application. Unencrypted backups do not contain usable Keychain material.
+- The encrypted-backup password.
+- For source builds: Go 1.19 or newer and a C toolchain, because the backup reader uses `go-sqlite3`/CGO.
+  - macOS: Xcode Command Line Tools.
+  - Linux: the distribution's compiler/build-essential package.
+  - Windows: a supported GCC/MinGW environment.
+
+## Download or build
+
+Prebuilt macOS, Linux, and Windows binaries are published on the [GitHub Releases](https://github.com/AzureOSK/sakamichi-token-extractor/releases) page. Each release also includes a `SHA256SUMS` file for verifying downloads.
 
 ### Build from source
 
@@ -164,6 +166,8 @@ It does not bypass certificate pinning or extract live process memory.
 - Only local Finder/iTunes-style backups are supported; iCloud backups are not downloaded by this project.
 
 ## Development
+
+See [MAINTENANCE.md](MAINTENANCE.md) for the known-good iOS 26.6 baseline, a safe evidence checklist, failure triage, parser assumptions, and an LLM-oriented compatibility-fix playbook.
 
 Run all tests and static checks:
 
