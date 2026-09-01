@@ -1,0 +1,9 @@
+/bin/
+/dist/
+.DS_Store
+
+# Credential output from sakamichi-token-extractor
+sakamichi_refresh_tokens/
+*_refresh_token.txt
+index.json
+diagnostics.json
