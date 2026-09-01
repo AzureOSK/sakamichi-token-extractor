@@ -51,6 +51,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install Windows GCC
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
       - name: Add Windows GCC to PATH
         if: runner.os == 'Windows'
         shell: pwsh
