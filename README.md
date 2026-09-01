@@ -29,6 +29,46 @@ A refresh token is a bearer credential. Anyone who obtains one may be able to ac
 
 Prebuilt macOS, Linux, and Windows binaries are published on the [GitHub Releases](https://github.com/AzureOSK/sakamichi-token-extractor/releases) page. Each release also includes a `SHA256SUMS` file for verifying downloads.
 
+### Use a prebuilt release
+
+Open the [latest release](https://github.com/AzureOSK/sakamichi-token-extractor/releases/latest), download `SHA256SUMS`, and download the archive matching your computer:
+
+| Computer | Release archive suffix |
+|---|---|
+| Apple Silicon Mac | `darwin_arm64.tar.gz` |
+| Intel Mac | `darwin_amd64.tar.gz` |
+| 64-bit Intel/AMD Linux | `linux_amd64.tar.gz` |
+| 64-bit ARM Linux | `linux_arm64.tar.gz` |
+| 64-bit Windows | `windows_amd64.zip` |
+
+On macOS, `uname -m` prints `arm64` on Apple Silicon and `x86_64` on an Intel Mac. Verify the downloaded archive by comparing its checksum with the matching line in `SHA256SUMS`:
+
+```shell
+shasum -a 256 sakamichi-token-extractor_*.tar.gz
+```
+
+Extract and run it:
+
+```shell
+tar -xzf sakamichi-token-extractor_*_darwin_*.tar.gz
+cd sakamichi-token-extractor_*_darwin_*/
+./sakamichi-token-extractor
+```
+
+The macOS binaries are not currently code-signed or notarized. If macOS blocks the verified binary, open **System Settings → Privacy & Security** and choose **Open Anyway**.
+
+On Windows, verify the ZIP in PowerShell by comparing this result with `SHA256SUMS`:
+
+```powershell
+Get-FileHash .\sakamichi-token-extractor_*_windows_amd64.zip -Algorithm SHA256
+```
+
+Then extract the ZIP and run `sakamichi-token-extractor.exe` from the extracted directory. Linux uses the same `tar -xzf` and `./sakamichi-token-extractor` commands as macOS with the appropriate Linux archive.
+
+The command finds the normal Finder/iTunes MobileSync backup location automatically. It prompts for the encrypted-backup password and writes the recovered token files to the same directory as the executable. See [Usage](#usage) to select a backup or output directory explicitly.
+
+### Build from source
+
 To build from source:
 
 ```shell
@@ -74,7 +114,7 @@ Select a device backup explicitly, including one stored on an external drive:
 
 The `--backup` value may also be a directory containing several device-backup directories. If more than one backup is found, the command lists them and asks you to choose one explicitly.
 
-Choose a persistent output directory instead of the default fresh temporary directory:
+By default, the token files are written to the directory containing the executable. Choose a different output directory with `--output`:
 
 ```shell
 ./bin/sakamichi-token-extractor \
@@ -100,7 +140,9 @@ diagnostics.json
 
 `index.json` contains app classification and Keychain metadata but no token values. `diagnostics.json` contains record counts and decoding failures but no Keychain values.
 
-On Unix-like systems, the output directory is mode `0700` and files are mode `0600`. Windows uses the account permissions inherited by newly created files and directories.
+The output files persist until you delete them. Keep the directory private and do not sync or share it because the refresh-token files contain bearer credentials.
+
+On Unix-like systems, newly created output directories are mode `0700` and files are mode `0600`. Permissions on an existing output directory, including the executable directory, are left unchanged. Windows uses the account permissions inherited by newly created files and directories.
 
 ## How it works
 
@@ -139,8 +181,8 @@ The release workflow runs when a tag beginning with `v` is pushed. It tests and 
 For example:
 
 ```shell
-git tag -a v0.1.4 -m "Sakamichi Token Extractor v0.1.4"
-git push origin v0.1.4
+git tag -a v0.1.5 -m "Sakamichi Token Extractor v0.1.5"
+git push origin v0.1.5
 ```
 
 The version reported by `sakamichi-token-extractor --version` is taken from the tag name during release builds. Local builds report `dev` unless a version is supplied explicitly, such as `make build VERSION=0.1.0`.

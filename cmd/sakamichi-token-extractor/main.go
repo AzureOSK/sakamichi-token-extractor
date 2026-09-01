@@ -121,6 +121,31 @@ func expandUserPath(value string) (string, error) {
 	return filepath.Join(home, value[2:]), nil
 }
 
+func defaultOutputDirectory() (string, error) {
+	executablePath, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("locate executable: %w", err)
+	}
+	return filepath.Dir(executablePath), nil
+}
+
+func ensureOutputDirectory(outputDir string) error {
+	info, err := os.Stat(outputDir)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("%s is not a directory", outputDir)
+		}
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := os.MkdirAll(outputDir, 0700); err != nil {
+		return err
+	}
+	return os.Chmod(outputDir, 0700)
+}
+
 func inspectBackup(dir string) (backupSummary, error) {
 	manifestPath := filepath.Join(dir, "Manifest.plist")
 	manifestFile, err := os.Open(manifestPath)
@@ -429,10 +454,7 @@ func writeDiagnostics(outputDir string, report diagnostics) (string, error) {
 		return "", err
 	}
 	encoded = append(encoded, '\n')
-	if err := os.MkdirAll(outputDir, 0700); err != nil {
-		return "", err
-	}
-	if err := os.Chmod(outputDir, 0700); err != nil {
+	if err := ensureOutputDirectory(outputDir); err != nil {
 		return "", err
 	}
 	diagnosticsPath := filepath.Join(outputDir, "diagnostics.json")
@@ -515,10 +537,7 @@ func extractTokens(db *backup.MobileBackup) ([]recoveredToken, diagnostics, erro
 }
 
 func writeRecoveredTokens(outputDir string, tokens []recoveredToken) ([]tokenIndexEntry, error) {
-	if err := os.MkdirAll(outputDir, 0700); err != nil {
-		return nil, err
-	}
-	if err := os.Chmod(outputDir, 0700); err != nil {
+	if err := ensureOutputDirectory(outputDir); err != nil {
 		return nil, err
 	}
 	counts := make(map[string]int)
@@ -566,7 +585,7 @@ func main() {
 	var listBackups bool
 	var showVersion bool
 	flag.StringVar(&backupPath, "backup", "", "device-backup directory, or a directory containing device backups")
-	flag.StringVar(&outputDir, "output", "", "output directory (default: a new secure temporary directory)")
+	flag.StringVar(&outputDir, "output", "", "output directory (default: directory containing the executable)")
 	flag.BoolVar(&listBackups, "list-backups", false, "list backups in the default MobileSync location")
 	flag.BoolVar(&showVersion, "version", false, "print version and exit")
 	flag.Usage = func() {
@@ -612,9 +631,12 @@ func main() {
 		os.Exit(1)
 	}
 	if outputDir == "" {
-		outputDir, err = os.MkdirTemp("", "sakamichi-refresh-tokens-")
+		outputDir, err = defaultOutputDirectory()
 	} else {
 		outputDir, err = expandUserPath(outputDir)
+	}
+	if err == nil {
+		err = ensureOutputDirectory(outputDir)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Cannot prepare output directory:", err)

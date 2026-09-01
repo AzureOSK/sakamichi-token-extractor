@@ -99,3 +99,38 @@ func TestWriteRecoveredTokensUsesRestrictedPermissions(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultOutputDirectoryIsExecutableDirectory(t *testing.T) {
+	executablePath, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := defaultOutputDirectory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Dir(executablePath)
+	if got != want {
+		t.Fatalf("default output directory = %q, want %q", got, want)
+	}
+}
+
+func TestEnsureOutputDirectoryPreservesExistingPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not expose Unix directory permission bits")
+	}
+	outputDir := filepath.Join(t.TempDir(), "existing")
+	if err := os.Mkdir(outputDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureOutputDirectory(outputDir); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(outputDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0755 {
+		t.Fatalf("existing directory mode = %o, want 755", got)
+	}
+}
